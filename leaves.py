@@ -27,9 +27,6 @@ cv2.waitKey(0)
 
 contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-# grab every contour that has a parent contour, and put it in a list called hole_contours
-hole_contours = [contour for contour in sorted(contours, key=cv2.contourArea, reverse=True) if cv2.contourArea(contour) < 1000]
-
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3, 3))
 dilated = cv2.dilate(edges, kernel)
 contours, hierarchy = cv2.findContours(dilated.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -40,23 +37,29 @@ leaf_contours = [contour for contour in sorted(contours, key=cv2.contourArea, re
 # Create a blank image to draw the filled contours onto
 filled = np.zeros_like(img)
 
+# Create a blank image for masking later
+mask = np.zeros_like(img_gray)
+
 # Iterate over the contours and fill them with green
 for contour in leaf_contours:
     # plot the convex hull of the contour
     hull = cv2.convexHull(contour)
     cv2.fillPoly(filled, pts=[hull], color=(0, 0, 255))
     cv2.fillPoly(filled, pts=[contour], color=(0, 255, 0))
-# Iterate over the hole contours and fill them with red
-# print("hole_contours: ", hole_contours)
-# for contour in hole_contours:
-#     cv2.fillPoly(filled, pts=[contour], color=(0, 0, 255))
-# Display the result
+    cv2.fillPoly(mask, pts=[contour], color=(255, 255, 255))
 cv2.imshow('Filled Contours', filled)
 cv2.waitKey(0)
+# Display the mask
+cv2.imshow('Mask', mask)
+cv2.waitKey(0)
+
+# apply the mask to the original image
+masked = cv2.bitwise_and(img, img, mask=mask)
+# save the masked image
+cv2.imwrite('masked.png', masked)
+
 # save the image to output.png
 cv2.imwrite('output.png', filled)
- 
-cv2.destroyAllWindows()
 
 def count_pixels(image_path):
     # Open the image
@@ -76,12 +79,47 @@ def count_pixels(image_path):
     # Get the total number of pixels in the image
     total_pixels = img_array.shape[0] * img_array.shape[1]
 
-    # Print the results
-    print(f"Green pixels: {green_pixels}")
-    print(f"Red pixels: {red_pixels}")
     # calculate the amount of fraying
     fraying = (red_pixels / (red_pixels + green_pixels)) * 100
-    print(f"Fraying: {fraying}%")
+    print(f"Fraying: {round(fraying, 3)}%")
+
+# figure out the amount of holes
 
 # Call the function with the image path as the argument
 count_pixels("output.png")
+
+# Load the image as a NumPy array
+img = np.array(Image.open('masked.png'))
+
+# Define the white and black thresholds
+white_threshold = 210  # pixels with values above this threshold are considered "white"
+black_threshold = 10   # pixels with values below this threshold are considered "black"
+
+# Count the number of pixels close to white and non-black pixels
+num_white_pixels = np.sum(img > white_threshold)
+num_non_black_pixels = np.sum(img > black_threshold)
+
+# Calculate the percentage of white pixels
+percentage_white = num_white_pixels / num_non_black_pixels
+print(f"Percentage of non-fray holes: {round(percentage_white * 100, 3)}%")
+
+# Load the masked image
+masked_img = cv2.imread('masked.png')
+
+# Define the color range for white pixels
+lower_white = np.array([white_threshold, white_threshold, white_threshold])
+upper_white = np.array([255, 255, 255])
+
+# Create a mask for the white pixels
+white_mask = cv2.inRange(masked_img, lower_white, upper_white)
+
+# Replace the white pixels with red pixels
+masked_img[white_mask == 255] = (0, 0, 255)
+
+# Save the image with the white pixels converted to red
+cv2.imwrite('masked_red.png', masked_img)
+
+# Display the image with the white pixels converted to red
+cv2.imshow('Masked Red', masked_img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
