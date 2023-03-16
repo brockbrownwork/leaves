@@ -23,19 +23,31 @@ edges = cv2.Canny(image=img_blur, threshold1=100, threshold2=200) # Canny Edge D
 cv2.imshow('Canny Edge Detection', edges)
 cv2.waitKey(0)
 
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(9,9))
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3, 3))
 dilated = cv2.dilate(edges, kernel)
 contours, hierarchy = cv2.findContours(dilated.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+# grab every contour that has a parent contour, and put it in a list called hole_contours
+hole_contours = [contour for contour in sorted(contours, key=cv2.contourArea, reverse=True) if cv2.contourArea(contour) < 1000]
+
+# Sort the contours in descending order based on their area and only keep the ones larger than 100 pixels
+leaf_contours = [contour for contour in sorted(contours, key=cv2.contourArea, reverse=True) if cv2.contourArea(contour) > 1000]
+
 # Create a blank image to draw the filled contours onto
 filled = np.zeros_like(img)
+hole_filled = np.zeros_like(img)
 
-# Iterate over the contours and fill them with red color
-for contour in contours:
-    cv2.fillPoly(filled, pts=[contour], color=(randint(0, 255), randint(0, 255), randint(0, 255)))
-
+# Iterate over the contours and fill them with green
+for contour in leaf_contours:
+    cv2.fillPoly(filled, pts=[contour], color=(0, 255, 0))
+# Iterate over the hole contours and fill them with red
+print("hole_contours: ", hole_contours)
+for contour in hole_contours:
+    cv2.fillPoly(hole_filled, pts=[contour], color=(0, 0, 255))
 # Display the result
 cv2.imshow('Filled Contours', filled)
+cv2.waitKey(0)
+cv2.imshow('Hole Filled Contours', hole_filled)
 cv2.waitKey(0)
 # save the image to output.png
 cv2.imwrite('output.png', filled)
