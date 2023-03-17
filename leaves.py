@@ -31,8 +31,10 @@ kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3, 3))
 dilated = cv2.dilate(edges, kernel)
 contours, hierarchy = cv2.findContours(dilated.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+minimum_leaf_size = 1000
+
 # Sort the contours in descending order based on their area and only keep the ones larger than 100 pixels
-leaf_contours = [contour for contour in sorted(contours, key=cv2.contourArea, reverse=True) if cv2.contourArea(contour) > 1000]
+leaf_contours = [contour for contour in sorted(contours, key=cv2.contourArea, reverse=True) if cv2.contourArea(contour) > minimum_leaf_size]
 
 # Create a blank image to draw the filled contours onto
 filled = np.zeros_like(img)
