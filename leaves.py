@@ -36,6 +36,21 @@ minimum_leaf_size = 1000
 # Sort the contours in descending order based on their area and only keep the ones larger than 100 pixels
 leaf_contours = [contour for contour in sorted(contours, key=cv2.contourArea, reverse=True) if cv2.contourArea(contour) > minimum_leaf_size]
 
+# create slightly shrunken versions of these contours
+def scale_contour(cnt, scale):
+    M = cv2.moments(cnt)
+    cx = int(M['m10']/M['m00'])
+    cy = int(M['m01']/M['m00'])
+
+    cnt_norm = cnt - [cx, cy]
+    cnt_scaled = cnt_norm * scale
+    cnt_scaled = cnt_scaled + [cx, cy]
+    cnt_scaled = cnt_scaled.astype(np.int32)
+
+    return cnt_scaled
+
+shrunken_contours = [scale_contour(contour, 0.95) for contour in leaf_contours]
+
 # Create a blank image to draw the filled contours onto
 filled = np.zeros_like(img)
 
@@ -43,12 +58,12 @@ filled = np.zeros_like(img)
 mask = np.zeros_like(img_gray)
 
 # Iterate over the contours and fill them with green
-for contour in leaf_contours:
+for contour, shrunken_contour in zip(leaf_contours, shrunken_contours):
     # plot the convex hull of the contour
     hull = cv2.convexHull(contour)
     cv2.fillPoly(filled, pts=[hull], color=(0, 0, 255))
     cv2.fillPoly(filled, pts=[contour], color=(0, 255, 0))
-    cv2.fillPoly(mask, pts=[contour], color=(255, 255, 255))
+    cv2.fillPoly(mask, pts=[shrunken_contour], color=(255, 255, 255))
 cv2.imshow('Filled Contours', filled)
 cv2.waitKey(0)
 # Display the mask
