@@ -56,8 +56,6 @@ mask = np.zeros_like(img_gray)
 for contour, shrunken_contour in zip(leaf_contours, shrunken_contours):
     # plot the convex hull of the contour
     hull = cv2.convexHull(contour)
-    print(hull, type(hull), hull.shape)
-    input("...")
     cv2.fillPoly(filled, pts=[hull], color=(0, 0, 255))
     cv2.fillPoly(filled, pts=[contour], color=(0, 255, 0))
     cv2.fillPoly(mask, pts=[shrunken_contour], color=(255, 255, 255))
